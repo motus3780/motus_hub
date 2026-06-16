@@ -1,0 +1,44 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "webapp",
+  "compatibility_date": "2026-04-13",
+  "pages_build_output_dir": "./dist",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "webapp-production",
+      "database_id": "local-dev-placeholder"
+    }
+  ],
+  // R2 buckets — Genspark hosted 파이프라인이 deploy 시점에 자동 생성·바인딩합니다.
+  // 코드 내 binding 변수명: c.env.R2 (src/index.tsx, src/routes/admin.ts, src/lib/types.ts)
+  // bucket_name: webapp-uploads (관리자 로고/위클리 이미지/카테고리 대표 이미지 저장)
+  // - 카테고리 대표 이미지:  uploads/weekly-section/{key}-{ts}-{rand}.{ext}
+  // - 호별 TOP 이미지:        uploads/weekly-top/{week}-slot{n}-{ts}-{rand}.{ext}
+  // - 자사 콘텐츠 첨부:        uploads/{ts}-{rand}.{ext}
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "webapp-uploads"
+    }
+  ],
+  "vars": {
+    "TIMEZONE": "Asia/Seoul"
+    // RESEND_API_KEY는 wrangler secret으로 등록하세요:
+    //   npx wrangler pages secret put RESEND_API_KEY --project-name webapp
+  },
+  // Cron Triggers (UTC 기준)
+  // - 30 21 * * *  → UTC 21:30 = KST 06:30 (매일) : 일간 뉴스 수집 + AI 요약 (사이트 일간 보기 유지)
+  // - 0 22 * * 0   → UTC 일 22:00 = KST 월 07:00 : 위클리 이메일 발송 (주 1회)
+  // 일간 발송 cron("30 22 * * *")은 위클리 전환에 따라 폐지되었습니다.
+  // 시각 변경은 관리자 설정에서 가능하며, scheduled 핸들러가 KST 현재 시각/요일과 매칭하여 실행합니다.
+  "triggers": {
+    "crons": [
+      "30 21 * * *",
+      "0 22 * * 0"
+    ]
+  }
+}
