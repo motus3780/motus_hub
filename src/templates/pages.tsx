@@ -3,7 +3,7 @@
 import type { CompanyContent, NewsItem, WeeklySummary, WeeklyTopNews } from '../lib/types'
 import {
   escapeHtml, formatKoreanDate, markdownToHtml,
-  formatWeekRangeKo, formatIssueLabelKo, formatNextIssueKo, getLastWeekRange,
+  formatWeekRangeKo, formatIssueLabelKo, formatNextIssueKo,
 } from '../lib/utils'
 
 // === 메인 페이지 ('이번 주 호' 중심) ===
@@ -119,29 +119,8 @@ export function renderMainPage(opts: {
     }
     jsonLdHtml = `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>`
   } else {
-    // === 베타 모드 폴백 (위클리 첫 호 발행 전) ===
-    const { issueDate } = getLastWeekRange()
-    nextIssueKo = formatNextIssueKo(
-      // 이번 주 월요일을 "이전 호 발행일"로 가정 → +7일 = 다음 월요일
-      // 즉, 베타 모드에서는 "이번 주 월요일" 또는 "다음 월요일"이 첫 위클리 발행 예정일
-      // 단순하게 "이번 주 월요일" 기준 다음 월요일을 안내
-      issueDate
-    )
-    weeklyBlockHtml = `
-    <section class="weekly-beta-fallback" aria-label="위클리 첫 발행 예정 안내">
-      <div class="weekly-beta-badge">BETA</div>
-      <h2 class="weekly-beta-title">🌱 첫 위클리 발행을 준비 중입니다</h2>
-      <p class="weekly-beta-lead">
-        <strong>모투스 위클리</strong>는 매주 월요일 오전 7시, 한 주간의 건설·분양·도시정비 핵심을 정리해 보내드립니다.
-      </p>
-      <div class="weekly-beta-next">
-        <span class="weekly-beta-next-label">📅 첫 위클리 발행 예정</span>
-        <strong class="weekly-beta-next-date">${escapeHtml(nextIssueKo)}</strong>
-      </div>
-      <p class="weekly-beta-foot">
-        지금 구독 신청해 주시면 첫 호부터 메일로 받아보실 수 있어요.
-      </p>
-    </section>`
+    // C-1: 베타 폴백 섹션 미노출
+    weeklyBlockHtml = ''
   }
 
   return `<!DOCTYPE html>
@@ -187,15 +166,19 @@ export function renderMainPage(opts: {
 
     ${weeklyBlockHtml}
 
-    <!-- 구독 카드 -->
-    <section class="subscribe-card">
-      <h2>📬 매주 월요일 아침, 메일로 받아보기</h2>
-      <p>모투스 리서치팀이 매주 월요일, 한 주간의 건설·분양 업계 핵심을 메일로 보내드립니다.</p>
-      <form id="sub-form" class="subscribe-form">
-        <input id="sub-name" type="text" placeholder="이름 (선택)" />
-        <input id="sub-email" type="email" placeholder="이메일 주소" required />
-        <button id="sub-btn" type="submit">구독 신청</button>
-      </form>
+    <!-- 일간 누적 뉴스 (C-3: 원본 뉴스보다 먼저) -->
+    <section class="card daily-supplement">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+        <div>
+          <h2 class="card-title" style="margin-bottom:6px;">📑 일간 누적 뉴스</h2>
+          <div style="font-size:13px;color:#7f8c8d;padding-left:16px;">
+            <span id="today-date"></span> · <span id="article-count"></span>
+            <span style="color:#bdc3c7;margin-left:6px;">(위클리는 매주 월요일 발송, 일간은 사이트에서만 누적 제공)</span>
+          </div>
+        </div>
+        ${opts.isAdmin ? '<button id="collect-btn" class="btn btn-secondary btn-sm" data-admin-only="true">🔄 지금 새로 수집하기</button>' : ''}
+      </div>
+      <div id="summary-content" class="summary-content"></div>
     </section>
 
     <!-- 원본 뉴스 -->
@@ -227,19 +210,15 @@ export function renderMainPage(opts: {
       </div>
     </section>
 
-    <!-- 일간 누적 뉴스 (A-1: 최하단으로 이동) -->
-    <section class="card daily-supplement">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-        <div>
-          <h2 class="card-title" style="margin-bottom:6px;">📑 일간 누적 뉴스</h2>
-          <div style="font-size:13px;color:#7f8c8d;padding-left:16px;">
-            <span id="today-date"></span> · <span id="article-count"></span>
-            <span style="color:#bdc3c7;margin-left:6px;">(위클리는 매주 월요일 발송, 일간은 사이트에서만 누적 제공)</span>
-          </div>
-        </div>
-        ${opts.isAdmin ? '<button id="collect-btn" class="btn btn-secondary btn-sm" data-admin-only="true">🔄 지금 새로 수집하기</button>' : ''}
-      </div>
-      <div id="summary-content" class="summary-content"></div>
+    <!-- 구독 카드 (C-2: 최하단으로 이동) -->
+    <section class="subscribe-card">
+      <h2>📬 매주 월요일 아침, 메일로 받아보기</h2>
+      <p>모투스 리서치팀이 매주 월요일, 한 주간의 건설·분양 업계 핵심을 메일로 보내드립니다.</p>
+      <form id="sub-form" class="subscribe-form">
+        <input id="sub-name" type="text" placeholder="이름 (선택)" />
+        <input id="sub-email" type="email" placeholder="이메일 주소" required />
+        <button id="sub-btn" type="submit">구독 신청</button>
+      </form>
     </section>
 
   </main>
